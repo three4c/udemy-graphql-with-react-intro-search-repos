@@ -1,8 +1,51 @@
 import React, { useState } from "react";
-import { ApolloProvider } from "react-apollo";
-import { Query } from "react-apollo";
+import { ApolloProvider, Mutation, Query } from "react-apollo";
 import client from "./client";
-import { SEARCH_REPOSITORIES } from "./graphql";
+import { ADD_STAR, REMOVE_STAR, SEARCH_REPOSITORIES } from "./graphql";
+
+const StarButton = props => {
+  const { node, query, first, last, after, before } = props;
+  const totalCount = props.node.stargazers.totalCount;
+  const viewerHasStarred = node.viewerHasStarred;
+  const starCount = totalCount === 1 ? "1 star" : `${totalCount} starts`;
+  const StarStatus = ({ addOrRemoveStar }) => {
+    return (
+      <button
+        onClick={() =>
+          addOrRemoveStar({
+            variables: { input: { starrableId: node.id } },
+            update: (store, { data: { addStar, removeStar } }) => {
+              const { starrable } = addStar || removeStar;
+              const data = store.readQuery({
+                query: SEARCH_REPOSITORIES,
+                variables: { query, first, last, after, before }
+              });
+              const edges = data.search.edges;
+              const newEdges = edges.map(edge => {
+                if (edge.node.id === node.id) {
+                  const totalCount = edge.node.stargazers.totalCount;
+                  const diff = starrable.viewerHasStarred ? 1 : -1;
+                  const newTotalCount = totalCount + diff;
+                  edge.node.stargazers.totalCount = newTotalCount;
+                }
+                return edge;
+              });
+              data.search.edges = newEdges;
+              store.writeQuery({ query: SEARCH_REPOSITORIES, data });
+            }
+          })
+        }
+      >
+        {starCount} | {viewerHasStarred ? "starred" : "-"}
+      </button>
+    );
+  };
+  return (
+    <Mutation mutation={viewerHasStarred ? REMOVE_STAR : ADD_STAR}>
+      {addOrRemoveStar => <StarStatus addOrRemoveStar={addOrRemoveStar} />}
+    </Mutation>
+  );
+};
 
 const PER_PAGE = 5;
 const DEFAUTL_STATE = {
@@ -35,8 +78,16 @@ const App = () => {
       last: null,
       before: null
     });
+  };
 
-    console.log(state);
+  const goPrevious = search => {
+    setState({
+      ...state,
+      first: null,
+      after: null,
+      last: PER_PAGE,
+      before: search.pageInfo.startCursor
+    });
   };
 
   return (
@@ -74,10 +125,18 @@ const App = () => {
                       >
                         {node.name}
                       </a>
+                      &nbsp;
+                      <StarButton
+                        node={node}
+                        {...{ query, first, last, after, before }}
+                      />
                     </li>
                   );
                 })}
               </ul>
+              {search.pageInfo.hasPreviousPage === true ? (
+                <button onClick={() => goPrevious(search)}>Previous</button>
+              ) : null}
               {search.pageInfo.hasNextPage === true ? (
                 // 引数のある関数は() => void形にしないとレンダー時に発火する
                 <button onClick={() => goNext(search)}>Next</button>

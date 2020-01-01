@@ -1,5 +1,9 @@
 import gql from "graphql-tag";
 
+/**
+ * on Repositoryと書いてあるのはinlineFragments
+ * 明示的にRepository型というのを指定するため
+ */
 export const SEARCH_REPOSITORIES = gql`
   query searchRepositories(
     $first: Int

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { ApolloProvider, Mutation, Query } from "react-apollo";
 import client from "./client";
 import { ADD_STAR, REMOVE_STAR, SEARCH_REPOSITORIES } from "./graphql";
@@ -53,21 +53,21 @@ const DEFAUTL_STATE = {
   after: null,
   last: null,
   before: null,
-  query: "フロントエンドエンジニア"
+  query: ""
 };
+
 const App = () => {
   const [state, setState] = useState(DEFAUTL_STATE);
   const { query, first, last, before, after } = state;
 
-  const handleChange = event => {
-    setState({
-      ...DEFAUTL_STATE,
-      query: event.target.value
-    });
-  };
+  const myRef = useRef(null);
 
   const handleSubmit = event => {
     event.preventDefault();
+    setState({
+      ...state,
+      query: myRef.current.value
+    });
   };
 
   const goNext = search => {
@@ -93,7 +93,8 @@ const App = () => {
   return (
     <ApolloProvider client={client}>
       <form onSubmit={handleSubmit}>
-        <input value={query} onChange={handleChange} />
+        <input ref={myRef} />
+        <input type="submit" value="Submit" />
       </form>
       <Query
         query={SEARCH_REPOSITORIES}

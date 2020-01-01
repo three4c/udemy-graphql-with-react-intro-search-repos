@@ -4,8 +4,9 @@ import { Query } from "react-apollo";
 import client from "./client";
 import { SEARCH_REPOSITORIES } from "./graphql";
 
+const PER_PAGE = 5;
 const DEFAUTL_STATE = {
-  first: 5,
+  first: PER_PAGE,
   after: null,
   last: null,
   before: null,
@@ -14,8 +15,6 @@ const DEFAUTL_STATE = {
 const App = () => {
   const [state, setState] = useState(DEFAUTL_STATE);
   const { query, first, last, before, after } = state;
-
-  console.log({ query });
 
   const handleChange = event => {
     setState({
@@ -26,6 +25,18 @@ const App = () => {
 
   const handleSubmit = event => {
     event.preventDefault();
+  };
+
+  const goNext = search => {
+    setState({
+      ...state,
+      first: PER_PAGE,
+      after: search.pageInfo.endCursor,
+      last: null,
+      before: null
+    });
+
+    console.log(state);
   };
 
   return (
@@ -67,6 +78,10 @@ const App = () => {
                   );
                 })}
               </ul>
+              {search.pageInfo.hasNextPage === true ? (
+                // 引数のある関数は() => void形にしないとレンダー時に発火する
+                <button onClick={() => goNext(search)}>Next</button>
+              ) : null}
             </>
           );
         }}
